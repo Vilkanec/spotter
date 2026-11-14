@@ -1,15 +1,4 @@
-import type { WeeklyPlan } from "@/domain/plan";
-import type { Profile } from "@/domain/profile";
-
-export interface SampleTenant {
-  id: string;
-  name: string;
-  description: string;
-  profile: Profile;
-  plan: WeeklyPlan | null;
-}
-
-export const SAMPLE_TENANTS: SampleTenant[] = [
+export const SAMPLE_TENANTS = [
   {
     id: "alex",
     name: "Alex",

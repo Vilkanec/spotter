@@ -1,6 +1,4 @@
-import type { Exercise } from "@/domain/exercise";
-
-export const EXERCISE_CATALOG: Exercise[] = [
+export const EXERCISE_CATALOG = [
   { id: "push-up", name: "Push-up", muscleGroup: "chest", equipment: [], complexity: 1, unsuitableFor: ["shoulder"], minutesPerSet: 2 },
   { id: "incline-push-up", name: "Incline push-up", muscleGroup: "chest", equipment: [], complexity: 1, unsuitableFor: ["shoulder"], minutesPerSet: 2 },
   { id: "dumbbell-floor-press", name: "Dumbbell floor press", muscleGroup: "chest", equipment: ["dumbbells"], complexity: 1, unsuitableFor: ["shoulder"], minutesPerSet: 2 },

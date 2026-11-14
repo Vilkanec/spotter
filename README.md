@@ -32,24 +32,24 @@ Without a key the app still runs: plan generation falls back to the simplified p
 npm test
 ```
 
-The tests never call the real AI. `ScriptedAiClient` returns prepared answers, so every run gives the same result.
+The tests never call the real AI. `ScriptedAiClient` (`tests/support.js`) returns prepared answers, so every run gives the same result. The scenarios come from the design document.
 
 | File | What it checks |
 |---|---|
-| `tests/PlanGenerator.test.ts` | Design document scenarios: valid plan on the first try, conflict fixed on the second try, AI fails twice so a simplified plan is built, too few exercises so the AI is not called, timeout or broken JSON, AI edit |
-| `tests/PlanValidator.test.ts` | Each rule R1–R6, unknown exercises and invalid format |
-| `tests/PlanService.test.ts` | Manual plan saved with a warning, weekly progress, and client data isolation |
+| `tests/PlanGenerator.test.js` | Normal case: a valid AI plan is accepted on the first try. Conflict: R2 and R5 violations are sent back and the corrected plan is accepted. AI breaks R4 twice, so a simplified plan is built. AI service error or malformed answer counts as a failed attempt. Error: too few exercises match, so the AI is not called |
+| `tests/PlanService.test.js` | A manual plan that breaks R2 is saved together with its warning |
+| `tests/TenantIsolation.test.js` | One client cannot read or change another client's plan and progress |
 
 ## Sample data
 
-Two clients are created on first start (`src/persistence/sampleData.ts`):
+Two clients are created on first start (`src/storage/sampleData.js`):
 
 | Client | Profile | Plan |
 |---|---|---|
 | Alex | Office worker training at home. Beginner, Mon/Wed/Fri, 45 min, dumbbells, knee pain | none |
 | Rita | Trains in a small gym. Intermediate, Tue/Thu/Sat, 60 min, barbell, bench, dumbbells, pull-up bar | a ready weekly plan |
 
-Every stored row (`profiles`, `plans`, `completions`) has a `tenant_id`. Repositories are created for one client and add `tenant_id` to every query, so one client cannot read or change another client's data. The current client is kept in a cookie and can be switched in the header. To start from scratch, stop the app and delete the `data/` folder.
+Every stored row (`profiles`, `plans`, `completions`) has a `tenant_id`. All queries for client data are in `src/storage/TenantStore.js`. A `TenantStore` is created for one client and adds that client's `tenant_id` to every query, so one client cannot read or change another client's data. The current client is kept in a cookie and can be switched in the header. To start from scratch, stop the app and delete the `data/` folder.
 
 ## Demo
 
@@ -69,14 +69,15 @@ The interface is in Lithuanian. The code and this README are in English.
 
 | Folder | Responsibility |
 |---|---|
-| `src/domain` | Types and schemas: profile, exercise, plan, progress |
-| `src/planning` | Core module: exercise selection, rules R1–R6, AI generation with one retry, fallback plan |
-| `src/ai` | The only place that calls the AI (Gemini) |
-| `src/persistence` | SQLite tables, tenant-scoped repositories, the list of 84 exercises and sample data |
-| `src/services` | Use cases: onboarding chat, plans and progress |
-| `src/server` | API error handling and the current client |
+| `src/core` | Core module. Pure logic with no database, HTTP or AI calls: profile and plan schemas, the list of 84 exercises, rules R1–R6 (`planRules.js`), AI generation with one retry (`PlanGenerator.js`), the fallback plan and weekly progress |
+| `src/ai` | `GeminiClient.js`, the only place that calls the AI |
+| `src/storage` | SQLite tables, sample data and the tenant-scoped `TenantStore.js` |
+| `src/services` | Use cases that connect the core, the storage and the AI: plans and progress, onboarding chat |
+| `src/server` | Picks the current client from the cookie and builds its services; API error handling |
 | `src/app` | Next.js pages and API routes |
 | `src/ui` | React components |
 | `tests` | Vitest tests |
+
+How plan generation flows: `ui/PlanDashboard.jsx` → `app/api/plan/generate/route.js` → `services/PlanService.js` → `core/PlanGenerator.js`. The generator filters the exercises (`core/exercises.js`), builds the prompt (`core/planPrompt.js`), asks the AI (`ai/GeminiClient.js`), checks the answer (`core/planRules.js`) and, after two failed attempts, builds a plan without AI (`core/fallbackPlan.js`). `PlanService` saves the result through `storage/TenantStore.js`.
 
 Exercise images come from [free-exercise-db](https://github.com/yuhonas/free-exercise-db) (public domain) and are stored in `public/exercises`.
